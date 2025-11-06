@@ -22,6 +22,29 @@ async def list_tools() -> list[Tool]:
     """List available tools."""
     return [
         Tool(
+            name="smart_query",
+            description="🌟 RECOMMENDED: Intelligent query router with automatic strategy selection. Classifies query type (symbol lookup, concept explanation, how-to, etc.) and automatically chooses optimal retrieval method (code index vs documentation RAG). Returns grounded answers with full reasoning trace showing which tools were called and why. Use this as your primary entry point instead of choosing between individual tools.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "question": {
+                        "type": "string",
+                        "description": "The question to ask (e.g., 'show me AutomationCondition.eager', 'how do schedules work', 'example of using sensors')",
+                    },
+                    "expand_detail": {
+                        "type": "boolean",
+                        "description": "Get full implementation details instead of signatures/summaries (default: false)",
+                        "default": False,
+                    },
+                    "repo_filter": {
+                        "type": "string",
+                        "description": "Optional repository filter (e.g., 'dagster', 'pyiceberg') to limit search scope",
+                    },
+                },
+                "required": ["question"],
+            },
+        ),
+        Tool(
             name="query_rag",
             description="Query the RAG system with a question. Optionally filter by tags and/or section path. The system will retrieve relevant context and generate an answer using Google AI Studio.",
             inputSchema={
@@ -341,7 +364,79 @@ DECISION GUIDE:
 async def call_tool(name: str, arguments: Any) -> list[TextContent]:
     """Handle tool calls."""
     try:
-        if name == "query_rag":
+        if name == "smart_query":
+            question = arguments.get("question")
+            expand_detail = arguments.get("expand_detail", False)
+            repo_filter = arguments.get("repo_filter")
+
+            result = rag_system.smart_query(
+                question=question,
+                expand_detail=expand_detail,
+                repo_filter=repo_filter,
+            )
+
+            # Format response with full reasoning trace
+            classification = result["classification"]
+            strategy = result["strategy"]
+            tool_calls = result["tool_calls"]
+            confidence = result["confidence"]
+            suggestions = result["suggestions"]
+
+            # Build classification summary
+            class_summary = (
+                f"**Query Type:** {classification['type']}\n"
+                f"**Confidence:** {classification['confidence']:.2f}\n"
+                f"**Reasoning:** {classification['reasoning']}"
+            )
+
+            if classification["symbols"]:
+                class_summary += f"\n**Symbols:** {', '.join(classification['symbols'])}"
+            if classification["concepts"]:
+                class_summary += f"\n**Concepts:** {', '.join(classification['concepts'])}"
+            if classification["libraries"]:
+                class_summary += f"\n**Libraries:** {', '.join(classification['libraries'])}"
+
+            # Build tool trace
+            tool_trace = []
+            for i, tc in enumerate(tool_calls, 1):
+                status = "✓" if tc["success"] else "✗"
+                tool_trace.append(
+                    f"{i}. {status} **{tc['tool']}**\n"
+                    f"   Reasoning: {tc['reasoning']}\n"
+                    f"   Result: {'Found' if tc['has_result'] else 'Empty'}"
+                )
+
+            tool_trace_text = "\n".join(tool_trace) if tool_trace else "No tools called"
+
+            # Build suggestions
+            suggestions_text = ""
+            if suggestions:
+                suggestions_text = "\n\n**Suggestions:**\n" + "\n".join(
+                    f"- {s}" for s in suggestions
+                )
+
+            # Confidence indicator
+            confidence_emoji = "🟢" if confidence > 0.7 else "🟡" if confidence > 0.4 else "🔴"
+
+            response = f"""**Answer:**
+{result['answer']}
+
+---
+
+**Query Analysis:**
+{class_summary}
+
+**Strategy:** {strategy['reasoning']}
+
+**Retrieval Trace:**
+{tool_trace_text}
+
+**Confidence:** {confidence_emoji} {confidence:.2f}{suggestions_text}
+"""
+
+            return [TextContent(type="text", text=response)]
+
+        elif name == "query_rag":
             question = arguments.get("question")
             top_k = arguments.get("top_k", 5)
             tags = arguments.get("tags")

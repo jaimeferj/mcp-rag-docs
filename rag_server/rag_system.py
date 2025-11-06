@@ -657,3 +657,48 @@ Please provide a clear and concise answer based on the context above. If the con
             'code_matches': code_results,
             'used_code_index': len(code_results) > 0,
         }
+
+    def smart_query(
+        self,
+        question: str,
+        expand_detail: bool = False,
+        repo_filter: Optional[str] = None,
+    ) -> dict:
+        """
+        Smart query with tiered decision routing.
+
+        This method automatically:
+        1. Classifies the query type (symbol lookup, concept, how-to, etc.)
+        2. Routes to optimal retrieval strategy (code index vs RAG)
+        3. Executes strategy with progressive detail levels
+        4. Synthesizes grounded answer with evidence
+
+        Args:
+            question: User's question
+            expand_detail: Whether to get full detail (vs minimal/signature)
+            repo_filter: Optional repository to filter (e.g., "dagster", "pyiceberg")
+
+        Returns:
+            Dictionary with:
+            - answer: Synthesized answer
+            - classification: Query type and extracted entities
+            - strategy: Retrieval strategy used
+            - tool_calls: All tool calls made with reasoning
+            - confidence: Overall confidence score (0.0-1.0)
+            - grounding: Evidence used (sources, code)
+            - suggestions: Follow-up suggestions
+        """
+        from rag_server.smart_query import SmartQueryHandler
+
+        handler = SmartQueryHandler(self)
+        result = handler.execute(question, expand_detail, repo_filter)
+
+        return {
+            'answer': result.answer,
+            'classification': result.classification,
+            'strategy': result.strategy,
+            'tool_calls': result.tool_calls,
+            'confidence': result.confidence,
+            'grounding': result.grounding,
+            'suggestions': result.suggestions,
+        }
