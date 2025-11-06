@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "rag-dagster-docs": {
+      "command": "uv",
+      "args": [
+        "--directory",
+        "/home/ubuntu/work/rag",
+        "run",
+        "python",
+        "-m",
+        "mcp_server.server"
+      ]
+    }
+  }
+}
