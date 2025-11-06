@@ -14,6 +14,8 @@ from qdrant_client.models import (
     MatchAny,
 )
 
+from config.settings import settings
+
 
 class VectorStore:
     """Wrapper for Qdrant vector database operations."""
@@ -28,11 +30,16 @@ class VectorStore:
         Initialize the Qdrant vector store.
 
         Args:
-            path: Path to store Qdrant data
+            path: Path to store Qdrant data (used if not using server mode)
             collection_name: Name of the collection
             vector_size: Dimension of the embedding vectors
         """
-        self.client = QdrantClient(path=path)
+        # Use server mode if configured, otherwise fall back to embedded mode
+        if settings.use_qdrant_server:
+            self.client = QdrantClient(url=settings.qdrant_url)
+        else:
+            self.client = QdrantClient(path=path)
+
         self.collection_name = collection_name
         self.vector_size = vector_size
         self._ensure_collection()

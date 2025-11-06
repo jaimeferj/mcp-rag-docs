@@ -15,6 +15,8 @@ class Settings(BaseSettings):
     top_k_results: int = 5
 
     # Qdrant Configuration
+    use_qdrant_server: bool = True
+    qdrant_url: str = "http://localhost:6333"
     qdrant_path: str = "./qdrant_storage"
     qdrant_collection_name: str = "documents"
 
@@ -25,6 +27,13 @@ class Settings(BaseSettings):
     # Google AI Models
     embedding_model: str = "text-embedding-004"
     llm_model: str = "gemini-1.5-flash"
+
+    # Dagster Repository
+    dagster_repo_path: str = "/home/ubuntu/dagster"
+
+    # Code Index
+    code_index_path: str = "./code_index.db"
+    enable_code_index: bool = True
 
     model_config = SettingsConfigDict(
         env_file=".env",
