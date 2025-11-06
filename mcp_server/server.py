@@ -51,7 +51,7 @@ async def list_tools() -> list[Tool]:
         ),
         Tool(
             name="add_document",
-            description="Add a text or markdown document to the RAG system. Supports hierarchical chunking for markdown. Optionally add tags for organization.",
+            description="Add a text or markdown document to the RAG system. Supports hierarchical chunking for markdown. Optionally add tags and base_path for organization.",
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -63,6 +63,10 @@ async def list_tools() -> list[Tool]:
                         "type": "array",
                         "items": {"type": "string"},
                         "description": "Optional tags for categorization (e.g., ['dagster', 'api', 'docs'])",
+                    },
+                    "base_path": {
+                        "type": "string",
+                        "description": "Optional base path to extract relative file structure from (e.g., '~/dagster/docs/docs' extracts 'getting-started/quickstart' from '~/dagster/docs/docs/getting-started/quickstart.md')",
                     },
                 },
                 "required": ["file_path"],
@@ -169,7 +173,8 @@ async def call_tool(name: str, arguments: Any) -> list[TextContent]:
         elif name == "add_document":
             file_path = arguments.get("file_path")
             tags = arguments.get("tags", [])
-            path = Path(file_path)
+            base_path = arguments.get("base_path")
+            path = Path(file_path).expanduser()  # Expand ~ to home directory
 
             if not path.exists():
                 return [
@@ -178,7 +183,10 @@ async def call_tool(name: str, arguments: Any) -> list[TextContent]:
                     )
                 ]
 
-            result = await rag_system.add_document(path, tags=tags)
+            # Expand base_path if provided
+            base_path_val = Path(base_path).expanduser() if base_path else None
+
+            result = await rag_system.add_document(path, tags=tags, base_path=base_path_val)
 
             tags_text = f"\n- Tags: {', '.join(result['tags'])}" if result['tags'] else ""
 

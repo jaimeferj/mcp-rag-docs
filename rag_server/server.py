@@ -66,17 +66,24 @@ async def health_check():
 async def upload_document(
     file: UploadFile = File(...),
     tags: str = Form(""),
+    base_path: str = Form(""),
 ):
     """
     Upload a document to the RAG system.
 
     Supports .txt and .md files.
     Tags can be provided as comma-separated values.
+    base_path: Optional base directory to extract relative path structure from
+               (e.g., '/home/user/docs' to extract 'getting-started/quickstart' from
+                '/home/user/docs/getting-started/quickstart.md')
     """
     rag_system = get_rag_system()
     try:
         # Parse tags from comma-separated string
         tags_list = [tag.strip() for tag in tags.split(",") if tag.strip()]
+
+        # Parse base_path
+        base_path_val = base_path.strip() if base_path else None
 
         # Check file extension
         file_path = Path(file.filename)
@@ -98,8 +105,10 @@ async def upload_document(
             temp_path = Path(temp_file.name)
 
         try:
-            # Add document to RAG system with tags
-            result = await rag_system.add_document(temp_path, text_content, tags=tags_list)
+            # Add document to RAG system with tags and base_path
+            result = await rag_system.add_document(
+                temp_path, text_content, tags=tags_list, base_path=base_path_val
+            )
 
             return DocumentUploadResponse(**result)
         finally:

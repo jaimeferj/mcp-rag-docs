@@ -37,7 +37,11 @@ class RAGSystem:
         self.llm_model = genai.GenerativeModel(settings.llm_model)
 
     async def add_document(
-        self, file_path: str | Path, content: Optional[str] = None, tags: Optional[List[str]] = None
+        self,
+        file_path: str | Path,
+        content: Optional[str] = None,
+        tags: Optional[List[str]] = None,
+        base_path: Optional[str | Path] = None,
     ) -> dict:
         """
         Add a document to the RAG system.
@@ -46,19 +50,20 @@ class RAGSystem:
             file_path: Path to the document
             content: Optional pre-loaded content
             tags: Optional list of tags for categorization
+            base_path: Optional base path to extract relative path structure from
 
         Returns:
             Dictionary with document info, tags, and number of chunks
         """
         tags = tags or []
 
-        # Process document
-        doc_info = await self.document_processor.process_document(file_path, content)
+        # Process document with base_path to extract filesystem structure
+        doc_info = await self.document_processor.process_document(file_path, content, base_path)
 
         # Determine if this is markdown for hierarchical chunking
         is_markdown = doc_info["file_type"] == "markdown"
 
-        # Chunk the text using hierarchical chunker
+        # Chunk the text using hierarchical chunker with path structure
         chunks = self.chunker.chunk_with_metadata(
             text=doc_info["content"],
             doc_id=doc_info["doc_id"],
@@ -67,6 +72,7 @@ class RAGSystem:
                 "filename": doc_info["filename"],
                 "file_type": doc_info["file_type"],
                 "tags": tags,
+                "path_structure": doc_info.get("path_structure"),
             },
         )
 
