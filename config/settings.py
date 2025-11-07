@@ -28,6 +28,12 @@ class Settings(BaseSettings):
     embedding_model: str = "text-embedding-004"
     llm_model: str = "gemini-1.5-flash"
 
+    # Rate Limiting Configuration
+    google_api_rpm_limit: int = 15  # Requests per minute
+    google_api_tpm_limit: int = 250000  # Tokens per minute
+    google_api_rpd_limit: int = 1000  # Requests per day
+    rate_limit_db_path: str = "./rate_limits.db"
+
     # Dagster Repository
     dagster_repo_path: str = "/home/ubuntu/dagster"
 

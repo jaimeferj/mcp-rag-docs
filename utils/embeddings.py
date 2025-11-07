@@ -1,23 +1,29 @@
 """Google AI embeddings service for text vectorization."""
 
-from typing import List
+from typing import List, Optional
 
-import google.generativeai as genai
+from utils.google_api_client import GoogleAPIClient
 
 
 class GoogleEmbeddingService:
-    """Service for generating embeddings using Google AI Studio."""
+    """Service for generating embeddings using Google AI Studio with rate limiting."""
 
-    def __init__(self, api_key: str, model_name: str = "text-embedding-004"):
+    def __init__(
+        self,
+        api_key: str,
+        model_name: str = "text-embedding-004",
+        api_client: Optional[GoogleAPIClient] = None,
+    ):
         """
         Initialize the Google embedding service.
 
         Args:
             api_key: Google AI Studio API key
             model_name: Name of the embedding model to use
+            api_client: Optional GoogleAPIClient instance (will create if not provided)
         """
-        genai.configure(api_key=api_key)
         self.model_name = model_name
+        self.api_client = api_client if api_client is not None else GoogleAPIClient(api_key=api_key)
 
     def embed_text(self, text: str) -> List[float]:
         """
@@ -28,8 +34,11 @@ class GoogleEmbeddingService:
 
         Returns:
             Embedding vector as list of floats
+
+        Raises:
+            RateLimitExceededError: If rate limits would be exceeded
         """
-        result = genai.embed_content(
+        result = self.api_client.embed_content(
             model=f"models/{self.model_name}",
             content=text,
             task_type="retrieval_document",
@@ -45,8 +54,11 @@ class GoogleEmbeddingService:
 
         Returns:
             Embedding vector as list of floats
+
+        Raises:
+            RateLimitExceededError: If rate limits would be exceeded
         """
-        result = genai.embed_content(
+        result = self.api_client.embed_content(
             model=f"models/{self.model_name}",
             content=query,
             task_type="retrieval_query",

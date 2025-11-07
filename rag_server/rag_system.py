@@ -3,11 +3,10 @@
 from pathlib import Path
 from typing import List, Optional
 
-import google.generativeai as genai
-
 from config.settings import settings
 from utils.document_processor import DocumentProcessor
 from utils.embeddings import GoogleEmbeddingService
+from utils.google_api_client import GoogleAPIClient
 from utils.github_parser import GitHubURLParser
 from utils.hierarchical_chunker import HierarchicalChunker
 from utils.reference_extractor import PythonReferenceExtractor
@@ -21,10 +20,20 @@ class RAGSystem:
 
     def __init__(self):
         """Initialize the RAG system with all components."""
-        # Initialize services
+        # Initialize rate-limited Google API client
+        self.api_client = GoogleAPIClient(
+            api_key=settings.google_api_key,
+            rpm_limit=settings.google_api_rpm_limit,
+            tpm_limit=settings.google_api_tpm_limit,
+            rpd_limit=settings.google_api_rpd_limit,
+            rate_limit_db_path=settings.rate_limit_db_path,
+        )
+
+        # Initialize services with shared API client
         self.embedding_service = GoogleEmbeddingService(
             api_key=settings.google_api_key,
             model_name=settings.embedding_model,
+            api_client=self.api_client,
         )
         self.vector_store = VectorStore(
             path=settings.qdrant_path,
@@ -49,9 +58,8 @@ class RAGSystem:
             except Exception as e:
                 print(f"Warning: Could not initialize code index: {e}")
 
-        # Initialize Google AI for generation
-        genai.configure(api_key=settings.google_api_key)
-        self.llm_model = genai.GenerativeModel(settings.llm_model)
+        # Store model name for generation
+        self.llm_model_name = settings.llm_model
 
     async def add_document(
         self,
@@ -167,9 +175,9 @@ class RAGSystem:
 
         context = "\n\n".join(context_parts)
 
-        # Generate answer using LLM
+        # Generate answer using LLM with rate limiting
         prompt = self._build_prompt(question, context)
-        response = self.llm_model.generate_content(prompt)
+        response = self.api_client.generate_content(self.llm_model_name, prompt)
 
         # Extract sources with section information
         sources = [
