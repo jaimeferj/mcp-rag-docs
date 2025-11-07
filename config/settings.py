@@ -35,6 +35,10 @@ class Settings(BaseSettings):
     code_index_path: str = "./code_index.db"
     enable_code_index: bool = True
 
+    # OpenAI-Compatible API
+    enable_openai_api: bool = True
+    openai_api_key: str = ""  # Optional API key for authentication
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

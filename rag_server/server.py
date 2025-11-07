@@ -7,6 +7,7 @@ from pathlib import Path
 
 from fastapi import FastAPI, File, Form, HTTPException, Query, UploadFile
 from fastapi.responses import JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
 
 from config.settings import settings
 from rag_server.models import (
@@ -40,6 +41,20 @@ app = FastAPI(
     version="0.1.0",
     lifespan=lifespan,
 )
+
+# Add CORS middleware for web UI access
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # In production, specify actual origins
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Include OpenAI-compatible API router
+if settings.enable_openai_api:
+    from rag_server.openai_api import router as openai_router
+    app.include_router(openai_router)
 
 
 def get_rag_system() -> RAGSystem:
