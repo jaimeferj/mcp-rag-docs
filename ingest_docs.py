@@ -32,14 +32,17 @@ async def ingest_directory(
         print(f"Error: Directory not found: {docs_path}")
         return
 
-    # Find all markdown files
-    md_files = list(docs_path.glob(pattern))
+    # Find all markdown files (.md and .mdx)
+    md_files = list(docs_path.glob("**/*.md"))
+    mdx_files = list(docs_path.glob("**/*.mdx"))
+    all_files = md_files + mdx_files
 
-    if not md_files:
-        print(f"No files matching pattern '{pattern}' found in {docs_path}")
+    if not all_files:
+        print(f"No markdown files found in {docs_path}")
         return
 
-    print(f"Found {len(md_files)} files to ingest...")
+    print(f"Found {len(md_files)} .md files and {len(mdx_files)} .mdx files")
+    print(f"Total files to ingest: {len(all_files)}")
     print(f"Base path: {base}")
     print(f"Tags: {', '.join(tags) if tags else 'none'}")
     print()
@@ -47,7 +50,7 @@ async def ingest_directory(
     successful = 0
     failed = 0
 
-    for i, file_path in enumerate(md_files, 1):
+    for i, file_path in enumerate(all_files, 1):
         try:
             # Get relative path for display
             try:
@@ -55,7 +58,7 @@ async def ingest_directory(
             except ValueError:
                 rel_path = file_path
 
-            print(f"[{i}/{len(md_files)}] Processing: {rel_path}")
+            print(f"[{i}/{len(all_files)}] Processing: {rel_path}")
 
             # Add document to RAG system
             result = await rag_system.add_document(
@@ -78,7 +81,7 @@ async def ingest_directory(
     print(f"Ingestion complete!")
     print(f"  Successful: {successful}")
     print(f"  Failed: {failed}")
-    print(f"  Total: {len(md_files)}")
+    print(f"  Total: {len(all_files)}")
 
 
 async def main():

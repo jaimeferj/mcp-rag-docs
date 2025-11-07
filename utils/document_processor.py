@@ -10,7 +10,7 @@ import aiofiles
 class DocumentProcessor:
     """Process and extract content from documents."""
 
-    SUPPORTED_EXTENSIONS = {".txt", ".md"}
+    SUPPORTED_EXTENSIONS = {".txt", ".md", ".mdx"}
 
     @staticmethod
     def is_supported(file_path: str | Path) -> bool:
