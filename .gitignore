@@ -17,3 +17,8 @@ qdrant_storage/
 
 # Uploaded documents
 uploads/
+
+# Database files
+*.db
+rate_limits.db
+code_index.db
